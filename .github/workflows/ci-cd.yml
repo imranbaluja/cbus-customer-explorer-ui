@@ -36,7 +36,7 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ vars.AWSREGION }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
 
       - name: Get CloudFormation Outputs
         id: cfn-outputs
@@ -48,7 +48,7 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ vars.AWSREGION }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
 
       - name: Deploy to S3
         run: |
@@ -56,13 +56,13 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ vars.AWSREGION }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
 
       - name: Invalidate CloudFront
         uses: chetan/invalidate-cloudfront-action@v2
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ vars.AWSREGION }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
           DISTRIBUTION: ${{ steps.cfn-outputs.outputs.distribution }}
           PATHS: "/*"
