@@ -43,6 +43,7 @@ jobs:
       - name: Get CloudFormation Outputs
         id: cfn-outputs
         run: |
+          STACK_NAME="${{ vars.ENV_SHORT }}-${{ vars.APP_NAME }}"
           BUCKET=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='BucketName'].OutputValue" --output text)
           DISTRIBUTION=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='CloudFrontDistributionId'].OutputValue" --output text)
           echo "bucket=$BUCKET" >> $GITHUB_OUTPUT
