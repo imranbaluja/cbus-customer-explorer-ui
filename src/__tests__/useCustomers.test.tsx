@@ -1,10 +1,14 @@
-/// <reference types="vitest" />
+// src/__tests__/useCustomers.test.tsx
+import React from "react";
 import { renderHook, waitFor } from "@testing-library/react";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+
 import { CustomerProvider } from "../context/CustomerContext";
 import { useCustomers } from "../hooks/useCustomers";
+import * as client from "../api/client";
 
-// Mock fetch
-global.fetch = vi.fn();
+// Mock fetchCustomers from the API client
+vi.mock("../api/client");
 
 const mockResponse = {
   data: [
@@ -15,25 +19,22 @@ const mockResponse = {
       registrationDate: "2024-01-01T00:00:00.000Z",
     },
   ],
-  page: 1,
-  limit: 10,
-  total: 1,
+  meta: {
+    page: 1,
+    limit: 10,
+    totalItems: 1,
+  },
 };
 
 describe("useCustomers", () => {
   beforeEach(() => {
-    // @ts-expect-error Vitest global
-    (global.fetch as unknown as vi.Mock).mockReset();
+    vi.resetAllMocks();
   });
 
-  it("fetches data on mount", async () => {
-    // @ts-expect-error Vitest global
-    (global.fetch as unknown as vi.Mock).mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockResponse,
-    });
+  const wrapper = ({ children }: { children: React.ReactNode }) => <CustomerProvider>{children}</CustomerProvider>;
 
-    const wrapper = ({ children }: { children: React.ReactNode }) => <CustomerProvider>{children}</CustomerProvider>;
+  it("fetches data on mount", async () => {
+    (client.fetchCustomers as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(mockResponse);
 
     const { result } = renderHook(() => useCustomers(), { wrapper });
 
@@ -48,14 +49,7 @@ describe("useCustomers", () => {
   });
 
   it("handles fetch error", async () => {
-    // @ts-expect-error Vitest global
-    (global.fetch as unknown as vi.Mock).mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      text: async () => "Server error",
-    });
-
-    const wrapper = ({ children }: { children: React.ReactNode }) => <CustomerProvider>{children}</CustomerProvider>;
+    (client.fetchCustomers as unknown as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("Server error"));
 
     const { result } = renderHook(() => useCustomers(), { wrapper });
 

@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { CustomerTable } from "../components/CustomerTable";
 import type { Customer } from "../types/customer";
-
+import { describe, it, expect } from "vitest";
 const customers: Customer[] = [
   {
     id: "1",
