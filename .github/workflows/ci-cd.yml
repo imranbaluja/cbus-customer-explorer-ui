@@ -29,9 +29,10 @@ jobs:
       - name: Deploy CloudFormation stack
         run: |
           BUCKET_PREFIX="${{ vars.ENV_SHORT }}-${{ vars.APP_NAME }}"
+          STACK_NAME="${{ vars.ENV_SHORT }}-${{ vars.APP_NAME }}"
           aws cloudformation deploy \
             --template-file cloudformation-frontend.yml \
-            --stack-name frontend-stack \
+            --stack-name $STACK_NAME \
             --capabilities CAPABILITY_NAMED_IAM \
             --parameter-overrides BucketPrefix=$BUCKET_PREFIX
         env:
