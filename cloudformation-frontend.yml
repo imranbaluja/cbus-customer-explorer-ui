@@ -1,4 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
+
 Description: Static website hosting for Vite React app with S3 and CloudFront
 
 Parameters:
@@ -15,20 +16,21 @@ Resources:
       WebsiteConfiguration:
         IndexDocument: index.html
         ErrorDocument: index.html
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
 
-  FrontendBucketPolicy:
-    Type: AWS::S3::BucketPolicy
+  FrontendOAC:
+    Type: AWS::CloudFront::OriginAccessControl
     Properties:
-      Bucket: !Ref FrontendBucket
-      PolicyDocument:
-        Statement:
-          - Effect: Allow
-            Principal: "*"
-            Action: "s3:GetObject"
-            Resource: !Sub "${FrontendBucket.Arn}/*"
-            Condition:
-              StringEquals:
-                "aws:Referer": "cloudfront.amazonaws.com"
+      OriginAccessControlConfig:
+        Name: !Sub "${BucketPrefix}-oac"
+        Description: Access control for CloudFront to S3 origin
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
 
   FrontendDistribution:
     Type: AWS::CloudFront::Distribution
@@ -40,6 +42,7 @@ Resources:
           - Id: S3Origin
             DomainName: !GetAtt FrontendBucket.RegionalDomainName
             S3OriginConfig: {}
+            OriginAccessControlId: !Ref FrontendOAC
         DefaultCacheBehavior:
           TargetOriginId: S3Origin
           ViewerProtocolPolicy: redirect-to-https
@@ -54,7 +57,9 @@ Resources:
 Outputs:
   BucketName:
     Value: !Ref FrontendBucket
+
   CloudFrontDistributionId:
     Value: !Ref FrontendDistribution
+
   CloudFrontDomainName:
     Value: !GetAtt FrontendDistribution.DomainName
