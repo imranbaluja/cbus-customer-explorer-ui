@@ -1,0 +1,68 @@
+name: Deploy to AWS S3 and CloudFront
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: |
+          echo "VITE_API_URL=${{ vars.BACKEND_API_URL }}" > .env
+          npm run build
+
+      - name: Deploy CloudFormation stack
+        run: |
+          BUCKET_PREFIX="${{ vars.ENV_SHORT }}-${{ vars.APP_NAME }}"
+          aws cloudformation deploy \
+            --template-file cloudformation-frontend.yml \
+            --stack-name frontend-stack \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --parameter-overrides BucketPrefix=$BUCKET_PREFIX
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ vars.AWSREGION }}
+
+      - name: Get CloudFormation Outputs
+        id: cfn-outputs
+        run: |
+          BUCKET=$(aws cloudformation describe-stacks --stack-name frontend-stack --query "Stacks[0].Outputs[?OutputKey=='BucketName'].OutputValue" --output text)
+          DISTRIBUTION=$(aws cloudformation describe-stacks --stack-name frontend-stack --query "Stacks[0].Outputs[?OutputKey=='CloudFrontDistributionId'].OutputValue" --output text)
+          echo "bucket=$BUCKET" >> $GITHUB_OUTPUT
+          echo "distribution=$DISTRIBUTION" >> $GITHUB_OUTPUT
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ vars.AWSREGION }}
+
+      - name: Deploy to S3
+        run: |
+          aws s3 sync dist s3://${{ steps.cfn-outputs.outputs.bucket }} --delete
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ vars.AWSREGION }}
+
+      - name: Invalidate CloudFront
+        uses: chetan/invalidate-cloudfront-action@v2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ vars.AWSREGION }}
+          DISTRIBUTION: ${{ steps.cfn-outputs.outputs.distribution }}
+          PATHS: "/*"
